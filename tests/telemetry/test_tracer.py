@@ -7,9 +7,9 @@ from typing import Any, ClassVar
 import pytest
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
 
-from strix.telemetry import tracer as tracer_module
-from strix.telemetry import utils as telemetry_utils
-from strix.telemetry.tracer import Tracer, set_global_tracer
+from strike.telemetry import tracer as tracer_module
+from strike.telemetry import utils as telemetry_utils
+from strike.telemetry.tracer import Tracer, set_global_tracer
 
 
 def _load_events(events_path: Path) -> list[dict[str, Any]]:
@@ -23,9 +23,9 @@ def _reset_tracer_globals(monkeypatch) -> None:
     monkeypatch.setattr(tracer_module, "_OTEL_BOOTSTRAPPED", False)
     monkeypatch.setattr(tracer_module, "_OTEL_REMOTE_ENABLED", False)
     telemetry_utils.reset_events_write_locks()
-    monkeypatch.delenv("STRIX_TELEMETRY", raising=False)
-    monkeypatch.delenv("STRIX_OTEL_TELEMETRY", raising=False)
-    monkeypatch.delenv("STRIX_POSTHOG_TELEMETRY", raising=False)
+    monkeypatch.delenv("STRIKE_TELEMETRY", raising=False)
+    monkeypatch.delenv("STRIKE_OTEL_TELEMETRY", raising=False)
+    monkeypatch.delenv("STRIKE_POSTHOG_TELEMETRY", raising=False)
     monkeypatch.delenv("TRACELOOP_BASE_URL", raising=False)
     monkeypatch.delenv("TRACELOOP_API_KEY", raising=False)
     monkeypatch.delenv("TRACELOOP_HEADERS", raising=False)
@@ -46,7 +46,7 @@ def test_tracer_local_mode_writes_jsonl_with_correlation(monkeypatch, tmp_path) 
     )
     tracer.update_tool_execution(execution_id, "completed", {"status_code": 200, "body": "ok"})
 
-    events_path = tmp_path / "strix_runs" / "local-observability" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "local-observability" / "events.jsonl"
     assert events_path.exists()
 
     events = _load_events(events_path)
@@ -79,7 +79,7 @@ def test_tracer_redacts_sensitive_payloads(monkeypatch, tmp_path) -> None:
         {"error": "request failed with token sk-secret-token-value"},
     )
 
-    events_path = tmp_path / "strix_runs" / "redaction-run" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "redaction-run" / "events.jsonl"
     events = _load_events(events_path)
     serialized = json.dumps(events)
 
@@ -118,10 +118,10 @@ def test_tracer_remote_mode_configures_traceloop_export(monkeypatch, tmp_path) -
     assert init_kwargs["api_key"] == "test-api-key"
     assert init_kwargs["headers"] == {"x-custom": "header"}
     assert isinstance(init_kwargs["processor"], SimpleSpanProcessor)
-    assert "strix.run_id" not in init_kwargs["resource_attributes"]
-    assert "strix.run_name" not in init_kwargs["resource_attributes"]
+    assert "strike.run_id" not in init_kwargs["resource_attributes"]
+    assert "strike.run_name" not in init_kwargs["resource_attributes"]
 
-    events_path = tmp_path / "strix_runs" / "remote-observability" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "remote-observability" / "events.jsonl"
     events = _load_events(events_path)
     run_started = next(event for event in events if event["event_type"] == "run.started")
     assert run_started["payload"]["remote_export_enabled"] is True
@@ -233,7 +233,7 @@ def test_run_completed_event_emitted_once(monkeypatch, tmp_path) -> None:
     tracer.save_run_data(mark_complete=True)
     tracer.save_run_data(mark_complete=True)
 
-    events_path = tmp_path / "strix_runs" / "single-complete" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "single-complete" / "events.jsonl"
     events = _load_events(events_path)
     run_completed = [event for event in events if event["event_type"] == "run.completed"]
     assert len(run_completed) == 1
@@ -247,7 +247,7 @@ def test_events_with_agent_id_include_agent_name(monkeypatch, tmp_path) -> None:
     tracer.log_agent_creation("agent-1", "Root Agent", "scan auth")
     tracer.log_chat_message("hello", "assistant", "agent-1")
 
-    events_path = tmp_path / "strix_runs" / "agent-name-enrichment" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "agent-name-enrichment" / "events.jsonl"
     events = _load_events(events_path)
     chat_event = next(event for event in events if event["event_type"] == "chat.message")
 
@@ -263,7 +263,7 @@ def test_run_metadata_is_only_on_run_lifecycle_events(monkeypatch, tmp_path) -> 
     tracer.log_chat_message("hello", "assistant", "agent-1")
     tracer.save_run_data(mark_complete=True)
 
-    events_path = tmp_path / "strix_runs" / "metadata-scope" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "metadata-scope" / "events.jsonl"
     events = _load_events(events_path)
 
     run_started = next(event for event in events if event["event_type"] == "run.started")
@@ -287,7 +287,7 @@ def test_set_run_name_resets_cached_paths(monkeypatch, tmp_path) -> None:
 
     new_events_path = tracer.events_file_path
     assert new_events_path != old_events_path
-    assert new_events_path == tmp_path / "strix_runs" / "renamed-run" / "events.jsonl"
+    assert new_events_path == tmp_path / "strike_runs" / "renamed-run" / "events.jsonl"
 
     events = _load_events(new_events_path)
     assert any(event["event_type"] == "run.started" for event in events)
@@ -304,7 +304,7 @@ def test_set_run_name_resets_run_completed_flag(monkeypatch, tmp_path) -> None:
     tracer.set_run_name("renamed-complete")
     tracer.save_run_data(mark_complete=True)
 
-    events_path = tmp_path / "strix_runs" / "renamed-complete" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "renamed-complete" / "events.jsonl"
     events = _load_events(events_path)
     run_completed = [event for event in events if event["event_type"] == "run.completed"]
 
@@ -339,7 +339,7 @@ def test_set_run_name_updates_traceloop_association_properties(monkeypatch, tmp_
 
 def test_events_write_locks_are_scoped_by_events_file(monkeypatch, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STRIX_TELEMETRY", "0")
+    monkeypatch.setenv("STRIKE_TELEMETRY", "0")
 
     tracer_one = Tracer("lock-run-a")
     tracer_two = Tracer("lock-run-b")
@@ -354,26 +354,26 @@ def test_events_write_locks_are_scoped_by_events_file(monkeypatch, tmp_path) -> 
 
 def test_tracer_skips_jsonl_when_telemetry_disabled(monkeypatch, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STRIX_TELEMETRY", "0")
+    monkeypatch.setenv("STRIKE_TELEMETRY", "0")
 
     tracer = Tracer("telemetry-disabled")
     set_global_tracer(tracer)
     tracer.log_chat_message("hello", "assistant", "agent-1")
     tracer.save_run_data(mark_complete=True)
 
-    events_path = tmp_path / "strix_runs" / "telemetry-disabled" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "telemetry-disabled" / "events.jsonl"
     assert not events_path.exists()
 
 
 def test_tracer_otel_flag_overrides_global_telemetry(monkeypatch, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STRIX_TELEMETRY", "0")
-    monkeypatch.setenv("STRIX_OTEL_TELEMETRY", "1")
+    monkeypatch.setenv("STRIKE_TELEMETRY", "0")
+    monkeypatch.setenv("STRIKE_OTEL_TELEMETRY", "1")
 
     tracer = Tracer("otel-enabled")
     set_global_tracer(tracer)
     tracer.log_chat_message("hello", "assistant", "agent-1")
     tracer.save_run_data(mark_complete=True)
 
-    events_path = tmp_path / "strix_runs" / "otel-enabled" / "events.jsonl"
+    events_path = tmp_path / "strike_runs" / "otel-enabled" / "events.jsonl"
     assert events_path.exists()

@@ -1,1 +1,1 @@
-"""Tests for strix.config module."""
+"""Tests for strike.config module."""

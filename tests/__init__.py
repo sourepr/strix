@@ -1,1 +1,1 @@
-# Strix Test Suite
+# Strike Test Suite

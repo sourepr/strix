@@ -5,23 +5,23 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 project_root = Path(SPECPATH)
-strix_root = project_root / 'strix'
+strike_root = project_root / 'strike'
 
 datas = []
 
-for md_file in strix_root.rglob('skills/**/*.md'):
+for md_file in strike_root.rglob('skills/**/*.md'):
     rel_path = md_file.relative_to(project_root)
     datas.append((str(md_file), str(rel_path.parent)))
 
-for jinja_file in strix_root.rglob('agents/**/*.jinja'):
+for jinja_file in strike_root.rglob('agents/**/*.jinja'):
     rel_path = jinja_file.relative_to(project_root)
     datas.append((str(jinja_file), str(rel_path.parent)))
 
-for xml_file in strix_root.rglob('*.xml'):
+for xml_file in strike_root.rglob('*.xml'):
     rel_path = xml_file.relative_to(project_root)
     datas.append((str(xml_file), str(rel_path.parent)))
 
-for tcss_file in strix_root.rglob('*.tcss'):
+for tcss_file in strike_root.rglob('*.tcss'):
     rel_path = tcss_file.relative_to(project_root)
     datas.append((str(tcss_file), str(rel_path.parent)))
 
@@ -110,33 +110,33 @@ hiddenimports = [
     # CVSS scoring
     'cvss',
 
-    # Strix modules
-    'strix',
-    'strix.interface',
-    'strix.interface.main',
-    'strix.interface.cli',
-    'strix.interface.tui',
-    'strix.interface.utils',
-    'strix.interface.tool_components',
-    'strix.agents',
-    'strix.agents.base_agent',
-    'strix.agents.state',
-    'strix.agents.StrixAgent',
-    'strix.llm',
-    'strix.llm.llm',
-    'strix.llm.config',
-    'strix.llm.utils',
-    'strix.llm.memory_compressor',
-    'strix.runtime',
-    'strix.runtime.runtime',
-    'strix.runtime.docker_runtime',
-    'strix.telemetry',
-    'strix.telemetry.tracer',
-    'strix.tools',
-    'strix.tools.registry',
-    'strix.tools.executor',
-    'strix.tools.argument_parser',
-    'strix.skills',
+    # Strike modules
+    'strike',
+    'strike.interface',
+    'strike.interface.main',
+    'strike.interface.cli',
+    'strike.interface.tui',
+    'strike.interface.utils',
+    'strike.interface.tool_components',
+    'strike.agents',
+    'strike.agents.base_agent',
+    'strike.agents.state',
+    'strike.agents.StrikeAgent',
+    'strike.llm',
+    'strike.llm.llm',
+    'strike.llm.config',
+    'strike.llm.utils',
+    'strike.llm.memory_compressor',
+    'strike.runtime',
+    'strike.runtime.runtime',
+    'strike.runtime.docker_runtime',
+    'strike.telemetry',
+    'strike.telemetry.tracer',
+    'strike.tools',
+    'strike.tools.registry',
+    'strike.tools.executor',
+    'strike.tools.argument_parser',
+    'strike.skills',
 ]
 
 hiddenimports += collect_submodules('litellm')
@@ -199,7 +199,7 @@ excludes = [
 ]
 
 a = Analysis(
-    ['strix/interface/main.py'],
+    ['strike/interface/main.py'],
     pathex=[str(project_root)],
     binaries=[],
     datas=datas,
@@ -220,7 +220,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='strix',
+    name='strike',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

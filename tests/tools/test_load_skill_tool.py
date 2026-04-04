@@ -1,7 +1,7 @@
 from typing import Any
 
-from strix.tools.agents_graph import agents_graph_actions
-from strix.tools.load_skill import load_skill_actions
+from strike.tools.agents_graph import agents_graph_actions
+from strike.tools.load_skill import load_skill_actions
 
 
 class _DummyLLM:
