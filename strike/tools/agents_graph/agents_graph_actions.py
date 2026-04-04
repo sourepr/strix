@@ -234,8 +234,6 @@ def _run_agent_in_thread(
         _agent_graph["nodes"][state.agent_id]["status"] = "error"
         _agent_graph["nodes"][state.agent_id]["finished_at"] = datetime.now(UTC).isoformat()
         _agent_graph["nodes"][state.agent_id]["result"] = {"error": str(e)}
-        _running_agents.pop(state.agent_id, None)
-        _agent_instances.pop(state.agent_id, None)
         raise
     else:
         if state.stop_requested:
@@ -244,10 +242,17 @@ def _run_agent_in_thread(
             _agent_graph["nodes"][state.agent_id]["status"] = "completed"
         _agent_graph["nodes"][state.agent_id]["finished_at"] = datetime.now(UTC).isoformat()
         _agent_graph["nodes"][state.agent_id]["result"] = result
-        _running_agents.pop(state.agent_id, None)
-        _agent_instances.pop(state.agent_id, None)
 
         return {"result": result}
+    finally:
+        if _agent_graph["nodes"].get(state.agent_id, {}).get("status") in ("running", "stopping"):
+            _agent_graph["nodes"][state.agent_id]["status"] = "failed"
+            _agent_graph["nodes"][state.agent_id]["finished_at"] = datetime.now(UTC).isoformat()
+            if not _agent_graph["nodes"][state.agent_id].get("result"):
+                _agent_graph["nodes"][state.agent_id]["result"] = {
+                    "error": "Agent thread terminated unexpectedly"
+                }
+        _running_agents.pop(state.agent_id, None)
 
 
 @register_tool(sandbox_execution=False)
@@ -564,32 +569,17 @@ def agent_finish(
             parent_id = agent_node["parent_id"]
 
             if parent_id in _agent_graph["nodes"]:
-                findings_xml = "\n".join(
-                    f"        <finding>{finding}</finding>" for finding in (findings or [])
+                findings_str = "; ".join(findings or [])
+                recs_str = "; ".join(final_recommendations or [])
+                report_message = (
+                    f"<agent_report name='{agent_node['name']}' "
+                    f"status='{'OK' if success else 'FAIL'}' "
+                    f"task='{agent_node['task'][:200]}'>\n"
+                    f"Summary: {result_summary}\n"
+                    f"{'Findings: ' + findings_str if findings_str else ''}\n"
+                    f"{'Recommendations: ' + recs_str if recs_str else ''}\n"
+                    f"</agent_report>"
                 )
-                recommendations_xml = "\n".join(
-                    f"        <recommendation>{rec}</recommendation>"
-                    for rec in (final_recommendations or [])
-                )
-
-                report_message = f"""<agent_completion_report>
-    <agent_info>
-        <agent_name>{agent_node["name"]}</agent_name>
-        <agent_id>{agent_id}</agent_id>
-        <task>{agent_node["task"]}</task>
-        <status>{"SUCCESS" if success else "FAILED"}</status>
-        <completion_time>{agent_node["finished_at"]}</completion_time>
-    </agent_info>
-    <results>
-        <summary>{result_summary}</summary>
-        <findings>
-{findings_xml}
-        </findings>
-        <recommendations>
-{recommendations_xml}
-        </recommendations>
-    </results>
-</agent_completion_report>"""
 
                 if parent_id not in _agent_messages:
                     _agent_messages[parent_id] = []
@@ -697,6 +687,40 @@ def stop_agent(agent_id: str) -> dict[str, Any]:
             "error": f"Failed to stop agent: {e}",
             "agent_id": agent_id,
         }
+
+
+@register_tool(sandbox_execution=False)
+def check_agent_status(
+    agent_state: Any,
+    target_agent_id: str,
+) -> dict[str, Any]:
+    """Check the current status of a specific agent."""
+    if target_agent_id not in _agent_graph["nodes"]:
+        return {"success": False, "error": f"Agent '{target_agent_id}' not found"}
+
+    node = _agent_graph["nodes"][target_agent_id]
+    thread_alive = (
+        target_agent_id in _running_agents and _running_agents[target_agent_id].is_alive()
+    )
+
+    if node["status"] == "running" and not thread_alive:
+        node["status"] = "failed"
+        node["finished_at"] = datetime.now(UTC).isoformat()
+        node["result"] = node.get("result") or {"error": "Agent thread died unexpectedly"}
+
+    return {
+        "success": True,
+        "agent_id": target_agent_id,
+        "name": node.get("name", "Unknown"),
+        "status": node["status"],
+        "task": node.get("task", ""),
+        "thread_alive": thread_alive,
+        "created_at": node.get("created_at"),
+        "finished_at": node.get("finished_at"),
+        "result_summary": str(node.get("result", {}).get("summary", ""))[:500]
+        if node.get("result")
+        else None,
+    }
 
 
 def send_user_message_to_agent(agent_id: str, message: str) -> dict[str, Any]:

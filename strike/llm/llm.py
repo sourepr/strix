@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
@@ -168,6 +169,13 @@ class LLM:
                 if attempt >= max_retries or not self._should_retry(e):
                     self._raise_error(e)
                 wait = min(90, 2 * (2**attempt))
+                logging.getLogger(__name__).warning(
+                    "LLM request failed (attempt %d/%d), retrying in %ds: %s",
+                    attempt + 1,
+                    max_retries + 1,
+                    wait,
+                    type(e).__name__,
+                )
                 await asyncio.sleep(wait)
 
     async def _stream(self, messages: list[dict[str, Any]]) -> AsyncIterator[LLMResponse]:

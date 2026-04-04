@@ -1,4 +1,6 @@
+import asyncio
 import inspect
+import logging
 import os
 from typing import Any
 
@@ -76,26 +78,53 @@ async def _execute_tool_in_sandbox(tool_name: str, agent_state: Any, **kwargs: A
         connect=SANDBOX_CONNECT_TIMEOUT,
     )
 
-    async with httpx.AsyncClient(trust_env=False) as client:
+    max_retries = 3
+    last_error: Exception | None = None
+
+    for attempt in range(max_retries + 1):
         try:
-            response = await client.post(
-                request_url, json=request_data, headers=headers, timeout=timeout
-            )
-            response.raise_for_status()
-            response_data = response.json()
-            if response_data.get("error"):
-                posthog.error("tool_execution_error", f"{tool_name}: {response_data['error']}")
-                raise RuntimeError(f"Sandbox execution error: {response_data['error']}")
-            return response_data.get("result")
+            async with httpx.AsyncClient(trust_env=False) as client:
+                response = await client.post(
+                    request_url, json=request_data, headers=headers, timeout=timeout
+                )
+                response.raise_for_status()
+                response_data = response.json()
+                if response_data.get("error"):
+                    posthog.error("tool_execution_error", f"{tool_name}: {response_data['error']}")
+                    raise RuntimeError(f"Sandbox execution error: {response_data['error']}")
+                return response_data.get("result")
         except httpx.HTTPStatusError as e:
             posthog.error("tool_http_error", f"{tool_name}: HTTP {e.response.status_code}")
             if e.response.status_code == 401:
                 raise RuntimeError("Authentication failed: Invalid or missing sandbox token") from e
+            last_error = e
+            if e.response.status_code >= 500 and attempt < max_retries:
+                await asyncio.sleep(2 * (attempt + 1))
+                continue
             raise RuntimeError(f"HTTP error calling tool server: {e.response.status_code}") from e
         except httpx.RequestError as e:
             error_type = type(e).__name__
+            last_error = e
+            if attempt < max_retries:
+                logging.getLogger(__name__).warning(
+                    "Sandbox tool %s network error (attempt %d/%d): %s",
+                    tool_name,
+                    attempt + 1,
+                    max_retries + 1,
+                    error_type,
+                )
+                await asyncio.sleep(2 * (attempt + 1))
+                continue
             posthog.error("tool_request_error", f"{tool_name}: {error_type}")
-            raise RuntimeError(f"Request error calling tool server: {error_type}") from e
+            raise RuntimeError(
+                f"Request error calling tool server after {max_retries + 1} attempts: {error_type}"
+            ) from e
+
+    if last_error:
+        raise RuntimeError(
+            f"Tool {tool_name} failed after {max_retries + 1} attempts"
+        ) from last_error
+    return None
 
 
 async def _execute_tool_locally(tool_name: str, agent_state: Any | None, **kwargs: Any) -> Any:
