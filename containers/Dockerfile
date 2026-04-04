@@ -186,7 +186,7 @@ RUN ARCH=$(uname -m) && \
     rm caido-cli.tar.gz && \
     mv caido-cli /usr/local/bin/
 
-ENV STRIX_SANDBOX_MODE=true
+ENV STRIKE_SANDBOX_MODE=true
 ENV PYTHONPATH=/app
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
@@ -194,7 +194,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 RUN mkdir -p /workspace && chown -R pentester:pentester /workspace /app
 
 COPY pyproject.toml uv.lock ./
-RUN echo "# Sandbox Environment" > README.md && mkdir -p strix && touch strix/__init__.py
+RUN echo "# Sandbox Environment" > README.md && mkdir -p strike && touch strike/__init__.py
 
 USER pentester
 RUN uv sync --frozen --no-dev --extra sandbox
@@ -203,12 +203,12 @@ RUN /app/.venv/bin/python -m playwright install chromium
 RUN uv pip install -r /home/pentester/tools/jwt_tool/requirements.txt && \
     ln -s /home/pentester/tools/jwt_tool/jwt_tool.py /home/pentester/.local/bin/jwt_tool
 
-COPY strix/__init__.py strix/
-COPY strix/config/ /app/strix/config/
-COPY strix/utils/ /app/strix/utils/
-COPY strix/telemetry/ /app/strix/telemetry/
-COPY strix/runtime/tool_server.py strix/runtime/__init__.py strix/runtime/runtime.py /app/strix/runtime/
-COPY strix/tools/ /app/strix/tools/
+COPY strike/__init__.py strike/
+COPY strike/config/ /app/strike/config/
+COPY strike/utils/ /app/strike/utils/
+COPY strike/telemetry/ /app/strike/telemetry/
+COPY strike/runtime/tool_server.py strike/runtime/__init__.py strike/runtime/runtime.py /app/strike/runtime/
+COPY strike/tools/ /app/strike/tools/
 
 RUN echo 'export PATH="/home/pentester/go/bin:/home/pentester/.local/bin:/home/pentester/.npm-global/bin:$PATH"' >> /home/pentester/.bashrc && \
     echo 'export PATH="/home/pentester/go/bin:/home/pentester/.local/bin:/home/pentester/.npm-global/bin:$PATH"' >> /home/pentester/.profile

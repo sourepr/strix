@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from strix.telemetry.tracer import Tracer, get_global_tracer, set_global_tracer
-from strix.tools.notes import notes_actions
+from strike.telemetry.tracer import Tracer, get_global_tracer, set_global_tracer
+from strike.tools.notes import notes_actions
 
 
 def _reset_notes_state() -> None:
@@ -32,7 +32,7 @@ def test_wiki_notes_are_persisted_and_removed(tmp_path: Path, monkeypatch) -> No
         wiki_filename = note.get("wiki_filename")
         assert isinstance(wiki_filename, str)
 
-        wiki_path = tmp_path / "strix_runs" / "wiki-test-run" / "wiki" / wiki_filename
+        wiki_path = tmp_path / "strike_runs" / "wiki-test-run" / "wiki" / wiki_filename
         assert wiki_path.exists()
         assert "## Architecture" in wiki_path.read_text(encoding="utf-8")
 
@@ -70,7 +70,7 @@ def test_notes_jsonl_replay_survives_memory_reset(tmp_path: Path, monkeypatch) -
         note_id = created["note_id"]
         assert isinstance(note_id, str)
 
-        notes_path = tmp_path / "strix_runs" / "notes-replay-run" / "notes" / "notes.jsonl"
+        notes_path = tmp_path / "strike_runs" / "notes-replay-run" / "notes" / "notes.jsonl"
         assert notes_path.exists() is True
 
         _reset_notes_state()

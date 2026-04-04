@@ -1,12 +1,12 @@
 [project]
-name = "strix-agent"
+name = "strike-agent"
 version = "0.8.3"
 description = "Open-source AI Hackers for your apps"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 authors = [
-  { name = "Strix", email = "hi@usestrix.com" },
+  { name = "Strike", email = "hi@usestrix.com" },
 ]
 keywords = [
   "cybersecurity",
@@ -49,7 +49,7 @@ dependencies = [
 ]
 
 [project.scripts]
-strix = "strix.interface.main:main"
+strike = "strike.interface.main:main"
 
 [project.optional-dependencies]
 vertex = ["google-cloud-aiplatform>=1.38"]
@@ -87,7 +87,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["strix"]
+packages = ["strike"]
 
 # ============================================================================
 # Type Checking Configuration
@@ -237,14 +237,14 @@ ignore = [
     "ARG001", # Unused function argument
     "PLR2004", # Magic value used in comparison
 ]
-"strix/tools/**/*.py" = [
+"strike/tools/**/*.py" = [
     "ARG001", # Unused function argument (tools may have unused args for interface consistency)
 ]
 
 [tool.ruff.lint.isort]
 force-single-line = false
 lines-after-imports = 2
-known-first-party = ["strix"]
+known-first-party = ["strike"]
 known-third-party = ["fastapi", "pydantic"]
 
 [tool.ruff.lint.pylint]
@@ -261,7 +261,7 @@ line-ending = "auto"
 # ============================================================================
 
 [tool.pyright]
-include = ["strix"]
+include = ["strike"]
 exclude = ["**/__pycache__", "build", "dist"]
 pythonVersion = "3.12"
 pythonPlatform = "Linux"
@@ -320,7 +320,7 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-known_first_party = ["strix"]
+known_first_party = ["strike"]
 known_third_party = ["fastapi", "pydantic", "litellm", "tenacity"]
 
 # ============================================================================
@@ -332,7 +332,7 @@ minversion = "6.0"
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=strix",
+    "--cov=strike",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
@@ -344,7 +344,7 @@ python_classes = ["Test*"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["strix"]
+source = ["strike"]
 omit = [
     "*/tests/*",
     "*/migrations/*",

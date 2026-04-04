@@ -1,1 +1,1 @@
-"""Tests for strix.interface module."""
+"""Tests for strike.interface module."""

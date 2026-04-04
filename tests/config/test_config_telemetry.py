@@ -1,13 +1,13 @@
 import json
 
-from strix.config.config import Config
+from strike.config.config import Config
 
 
 def test_traceloop_vars_are_tracked() -> None:
     tracked = Config.tracked_vars()
 
-    assert "STRIX_OTEL_TELEMETRY" in tracked
-    assert "STRIX_POSTHOG_TELEMETRY" in tracked
+    assert "STRIKE_OTEL_TELEMETRY" in tracked
+    assert "STRIKE_POSTHOG_TELEMETRY" in tracked
     assert "TRACELOOP_BASE_URL" in tracked
     assert "TRACELOOP_API_KEY" in tracked
     assert "TRACELOOP_HEADERS" in tracked

@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 
-import strix.agents as agents_module
-from strix.llm.config import LLMConfig
-from strix.tools.agents_graph import agents_graph_actions
+import strike.agents as agents_module
+from strike.llm.config import LLMConfig
+from strike.tools.agents_graph import agents_graph_actions
 
 
 def test_create_agent_inherits_parent_whitebox_flag(monkeypatch) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-5")
+    monkeypatch.setenv("STRIKE_LLM", "openai/gpt-5")
 
     agents_graph_actions._agent_graph["nodes"].clear()
     agents_graph_actions._agent_graph["edges"].clear()
@@ -24,7 +24,7 @@ def test_create_agent_inherits_parent_whitebox_flag(monkeypatch) -> None:
 
     captured_config: dict[str, object] = {}
 
-    class FakeStrixAgent:
+    class FakeStrikeAgent:
         def __init__(self, config: dict[str, object]):
             captured_config["agent_config"] = config
 
@@ -38,7 +38,7 @@ def test_create_agent_inherits_parent_whitebox_flag(monkeypatch) -> None:
         def start(self) -> None:
             return None
 
-    monkeypatch.setattr(agents_module, "StrixAgent", FakeStrixAgent)
+    monkeypatch.setattr(agents_module, "StrikeAgent", FakeStrikeAgent)
     monkeypatch.setattr(agents_graph_actions.threading, "Thread", FakeThread)
 
     agent_state = SimpleNamespace(
@@ -64,7 +64,7 @@ def test_create_agent_inherits_parent_whitebox_flag(monkeypatch) -> None:
 
 
 def test_delegation_prompt_includes_wiki_memory_instruction_in_whitebox(monkeypatch) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-5")
+    monkeypatch.setenv("STRIKE_LLM", "openai/gpt-5")
 
     agents_graph_actions._agent_graph["nodes"].clear()
     agents_graph_actions._agent_graph["edges"].clear()
@@ -114,7 +114,7 @@ def test_delegation_prompt_includes_wiki_memory_instruction_in_whitebox(monkeypa
 
 
 def test_agent_finish_appends_wiki_update_for_whitebox(monkeypatch) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-5")
+    monkeypatch.setenv("STRIKE_LLM", "openai/gpt-5")
 
     agents_graph_actions._agent_graph["nodes"].clear()
     agents_graph_actions._agent_graph["edges"].clear()
@@ -169,9 +169,11 @@ def test_agent_finish_appends_wiki_update_for_whitebox(monkeypatch) -> None:
         captured["delta"] = delta
         return {"success": True, "note_id": note_id}
 
-    monkeypatch.setattr("strix.tools.notes.notes_actions.list_notes", fake_list_notes)
-    monkeypatch.setattr("strix.tools.notes.notes_actions.get_note", fake_get_note)
-    monkeypatch.setattr("strix.tools.notes.notes_actions.append_note_content", fake_append_note_content)
+    monkeypatch.setattr("strike.tools.notes.notes_actions.list_notes", fake_list_notes)
+    monkeypatch.setattr("strike.tools.notes.notes_actions.get_note", fake_get_note)
+    monkeypatch.setattr(
+        "strike.tools.notes.notes_actions.append_note_content", fake_append_note_content
+    )
 
     state = SimpleNamespace(agent_id=child_id, parent_id=parent_id)
     result = agents_graph_actions.agent_finish(
@@ -190,7 +192,7 @@ def test_agent_finish_appends_wiki_update_for_whitebox(monkeypatch) -> None:
 
 
 def test_run_agent_in_thread_injects_shared_wiki_context_in_whitebox(monkeypatch) -> None:
-    monkeypatch.setenv("STRIX_LLM", "openai/gpt-5")
+    monkeypatch.setenv("STRIKE_LLM", "openai/gpt-5")
 
     agents_graph_actions._agent_graph["nodes"].clear()
     agents_graph_actions._agent_graph["edges"].clear()
@@ -247,8 +249,8 @@ def test_run_agent_in_thread_injects_shared_wiki_context_in_whitebox(monkeypatch
             },
         }
 
-    monkeypatch.setattr("strix.tools.notes.notes_actions.list_notes", fake_list_notes)
-    monkeypatch.setattr("strix.tools.notes.notes_actions.get_note", fake_get_note)
+    monkeypatch.setattr("strike.tools.notes.notes_actions.list_notes", fake_list_notes)
+    monkeypatch.setattr("strike.tools.notes.notes_actions.get_note", fake_get_note)
 
     state = FakeState()
     agent = FakeAgent()
@@ -284,8 +286,8 @@ def test_load_primary_wiki_note_prefers_repo_tag_match(monkeypatch) -> None:
             "note": {"note_id": note_id, "title": "Repo Wiki", "content": "content"},
         }
 
-    monkeypatch.setattr("strix.tools.notes.notes_actions.list_notes", fake_list_notes)
-    monkeypatch.setattr("strix.tools.notes.notes_actions.get_note", fake_get_note)
+    monkeypatch.setattr("strike.tools.notes.notes_actions.list_notes", fake_list_notes)
+    monkeypatch.setattr("strike.tools.notes.notes_actions.get_note", fake_get_note)
 
     agent_state = SimpleNamespace(
         task="analyze /workspace/appsmith",

@@ -41,19 +41,19 @@ lint:
 	@echo "🔍 Linting code with ruff..."
 	uv run ruff check . --fix
 	@echo "📝 Running additional linting with pylint..."
-	uv run pylint strix/ --score=no --reports=no
+	uv run pylint strike/ --score=no --reports=no
 	@echo "✅ Linting complete!"
 
 type-check:
 	@echo "🔍 Type checking with mypy..."
-	uv run mypy strix/
+	uv run mypy strike/
 	@echo "🔍 Type checking with pyright..."
-	uv run pyright strix/
+	uv run pyright strike/
 	@echo "✅ Type checking complete!"
 
 security:
 	@echo "🔒 Running security checks with bandit..."
-	uv run bandit -r strix/ -c pyproject.toml
+	uv run bandit -r strike/ -c pyproject.toml
 	@echo "✅ Security checks complete!"
 
 check-all: format lint type-check security
@@ -66,7 +66,7 @@ test:
 
 test-cov:
 	@echo "🧪 Running tests with coverage..."
-	uv run pytest -v --cov=strix --cov-report=term-missing --cov-report=html
+	uv run pytest -v --cov=strike --cov-report=term-missing --cov-report=html
 	@echo "✅ Tests with coverage complete!"
 	@echo "📊 Coverage report generated in htmlcov/"
 

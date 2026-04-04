@@ -1,4 +1,4 @@
-from strix.telemetry.utils import prune_otel_span_attributes
+from strike.telemetry.utils import prune_otel_span_attributes
 
 
 def test_prune_otel_span_attributes_drops_high_volume_prompt_content() -> None:
@@ -24,7 +24,7 @@ def test_prune_otel_span_attributes_drops_high_volume_prompt_content() -> None:
     assert "llm.output" not in pruned
     assert pruned["gen_ai.operation.name"] == "openai.chat"
     assert pruned["gen_ai.prompt.0.role"] == "system"
-    assert pruned["strix.filtered_attributes_count"] == 6
+    assert pruned["strike.filtered_attributes_count"] == 6
 
 
 def test_prune_otel_span_attributes_keeps_metadata_when_nothing_is_dropped() -> None:

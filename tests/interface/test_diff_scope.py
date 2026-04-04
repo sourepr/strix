@@ -5,10 +5,10 @@ import pytest
 
 
 def _load_utils_module():
-    module_path = Path(__file__).resolve().parents[2] / "strix" / "interface" / "utils.py"
-    spec = importlib.util.spec_from_file_location("strix_interface_utils_test", module_path)
+    module_path = Path(__file__).resolve().parents[2] / "strike" / "interface" / "utils.py"
+    spec = importlib.util.spec_from_file_location("strike_interface_utils_test", module_path)
     if spec is None or spec.loader is None:
-        raise RuntimeError("Failed to load strix.interface.utils for tests")
+        raise RuntimeError("Failed to load strike.interface.utils for tests")
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
