@@ -60,6 +60,9 @@ class Tracer:
         self.streaming_content: dict[str, str] = {}
         self.interrupted_content: dict[str, str] = {}
 
+        self._agent_tool_index: dict[str, list[int]] = {}
+        self._agent_chat_index: dict[str, list[int]] = {}
+
         self.vulnerability_reports: list[dict[str, Any]] = []
         self.final_scan_result: str | None = None
 
@@ -474,6 +477,12 @@ class Tracer:
         }
 
         self.chat_messages.append(message_data)
+
+        if agent_id:
+            if agent_id not in self._agent_chat_index:
+                self._agent_chat_index[agent_id] = []
+            self._agent_chat_index[agent_id].append(len(self.chat_messages) - 1)
+
         self._emit_event(
             "chat.message",
             actor={"agent_id": agent_id, "role": role},
@@ -506,6 +515,10 @@ class Tracer:
         }
 
         self.tool_executions[execution_id] = execution_data
+
+        if agent_id not in self._agent_tool_index:
+            self._agent_tool_index[agent_id] = []
+        self._agent_tool_index[agent_id].append(execution_id)
 
         if agent_id in self.agents:
             self.agents[agent_id]["tool_executions"].append(execution_id)
@@ -783,6 +796,14 @@ class Tracer:
         except (ValueError, TypeError):
             pass
         return 0.0
+
+    def get_agent_tool_executions(self, agent_id: str) -> list[tuple[int, dict[str, Any]]]:
+        exec_ids = self._agent_tool_index.get(agent_id, [])
+        return [(eid, self.tool_executions[eid]) for eid in exec_ids if eid in self.tool_executions]
+
+    def get_agent_chat_messages(self, agent_id: str) -> list[dict[str, Any]]:
+        indices = self._agent_chat_index.get(agent_id, [])
+        return [self.chat_messages[i] for i in indices if i < len(self.chat_messages)]
 
     def get_agent_tools(self, agent_id: str) -> list[dict[str, Any]]:
         return [

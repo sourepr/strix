@@ -9,8 +9,8 @@ from strike.config.config import Config, resolve_llm_config
 logger = logging.getLogger(__name__)
 
 
-MAX_TOTAL_TOKENS = 100_000
-MIN_RECENT_MESSAGES = 15
+MAX_TOTAL_TOKENS = 60_000
+MIN_RECENT_MESSAGES = 10
 
 SUMMARY_PROMPT_TEMPLATE = """You are an agent performing context
 condensation for a security agent. Your job is to compress scan data while preserving
@@ -149,6 +149,30 @@ def _handle_images(messages: list[dict[str, Any]], max_images: int) -> None:
                         image_count += 1
 
 
+def _trim_tool_results(content: str) -> str:
+    """Aggressively trim tool result blocks in older messages to reduce token count."""
+    import re
+
+    def _shorten_result(match: re.Match[str]) -> str:
+        full = match.group(0)
+        if len(full) <= 500:
+            return full
+        tool_name_match = re.search(r"<tool_name>(.*?)</tool_name>", full)
+        tool_name = tool_name_match.group(1) if tool_name_match else "unknown"
+        result_match = re.search(r"<result>(.*?)</result>", full, re.DOTALL)
+        if result_match:
+            result_text = result_match.group(1)
+            if len(result_text) > 300:
+                trimmed = result_text[:150] + "\n...[trimmed]...\n" + result_text[-150:]
+                return (
+                    f"<tool_result>\n<tool_name>{tool_name}</tool_name>\n"
+                    f"<result>{trimmed}</result>\n</tool_result>"
+                )
+        return full
+
+    return re.sub(r"<tool_result>.*?</tool_result>", _shorten_result, content, flags=re.DOTALL)
+
+
 class MemoryCompressor:
     def __init__(
         self,
@@ -198,6 +222,11 @@ class MemoryCompressor:
         recent_msgs = regular_msgs[-MIN_RECENT_MESSAGES:]
         old_msgs = regular_msgs[:-MIN_RECENT_MESSAGES]
 
+        for msg in old_msgs:
+            content = msg.get("content", "")
+            if isinstance(content, str) and "<tool_result>" in content and len(content) > 2000:
+                msg["content"] = _trim_tool_results(content)
+
         # Type assertion since we ensure model_name is not None in __init__
         model_name: str = self.model_name  # type: ignore[assignment]
 
@@ -205,7 +234,7 @@ class MemoryCompressor:
             _get_message_tokens(msg, model_name) for msg in system_msgs + regular_msgs
         )
 
-        if total_tokens <= MAX_TOTAL_TOKENS * 0.9:
+        if total_tokens <= MAX_TOTAL_TOKENS * 0.8:
             return messages
 
         compressed = []

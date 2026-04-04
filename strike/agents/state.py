@@ -61,6 +61,8 @@ class AgentState(BaseModel):
                 "action": action,
             }
         )
+        if len(self.actions_taken) > 100:
+            self.actions_taken = self.actions_taken[-100:]
 
     def add_observation(self, observation: dict[str, Any]) -> None:
         self.observations.append(
@@ -70,6 +72,8 @@ class AgentState(BaseModel):
                 "observation": observation,
             }
         )
+        if len(self.observations) > 100:
+            self.observations = self.observations[-100:]
 
     def add_error(self, error: str) -> None:
         self.errors.append(f"Iteration {self.iteration}: {error}")

@@ -890,7 +890,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
 
         self._start_scan_thread()
 
-        self.set_interval(0.35, self._update_ui_from_tracer)
+        self.set_interval(0.5, self._update_ui_from_tracer)
 
     def _update_ui_from_tracer(self) -> None:
         if self.show_splash:
@@ -1344,12 +1344,11 @@ class StrikeTUIApp(App):  # type: ignore[misc]
 
     def _get_agent_name_for_vulnerability(self, report_id: str) -> str | None:
         """Find the agent name that created a vulnerability report."""
-        for _exec_id, tool_data in list(self.tracer.tool_executions.items()):
-            if tool_data.get("tool_name") == "create_vulnerability_report":
-                result = tool_data.get("result", {})
-                if isinstance(result, dict) and result.get("report_id") == report_id:
-                    agent_id = tool_data.get("agent_id")
-                    if agent_id and agent_id in self.tracer.agents:
+        for agent_id in self.tracer.agents:
+            for _exec_id, tool_data in self.tracer.get_agent_tool_executions(agent_id):
+                if tool_data.get("tool_name") == "create_vulnerability_report":
+                    result = tool_data.get("result", {})
+                    if isinstance(result, dict) and result.get("report_id") == report_id:
                         name: str = self.tracer.agents[agent_id].get("name", "Unknown Agent")
                         return name
         return None
@@ -1396,7 +1395,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
 
     def _start_dot_animation(self) -> None:
         if self._dot_animation_timer is None:
-            self._dot_animation_timer = self.set_interval(0.06, self._animate_dots)
+            self._dot_animation_timer = self.set_interval(0.1, self._animate_dots)
 
     def _stop_dot_animation(self) -> None:
         if self._dot_animation_timer is not None:
@@ -1432,26 +1431,24 @@ class StrikeTUIApp(App):  # type: ignore[misc]
     def _agent_has_real_activity(self, agent_id: str) -> bool:
         initial_tools = {"scan_start_info", "subagent_start_info"}
 
-        for _exec_id, tool_data in list(self.tracer.tool_executions.items()):
-            if tool_data.get("agent_id") == agent_id:
-                tool_name = tool_data.get("tool_name", "")
-                if tool_name not in initial_tools:
-                    return True
+        for _exec_id, tool_data in self.tracer.get_agent_tool_executions(agent_id):
+            tool_name = tool_data.get("tool_name", "")
+            if tool_name not in initial_tools:
+                return True
 
         streaming = self.tracer.get_streaming_content(agent_id)
         return bool(streaming and streaming.strip())
 
     def _agent_vulnerability_count(self, agent_id: str) -> int:
         count = 0
-        for _exec_id, tool_data in list(self.tracer.tool_executions.items()):
-            if tool_data.get("agent_id") == agent_id:
-                tool_name = tool_data.get("tool_name", "")
-                if tool_name == "create_vulnerability_report":
-                    status = tool_data.get("status", "")
-                    if status == "completed":
-                        result = tool_data.get("result", {})
-                        if isinstance(result, dict) and result.get("success"):
-                            count += 1
+        for _exec_id, tool_data in self.tracer.get_agent_tool_executions(agent_id):
+            tool_name = tool_data.get("tool_name", "")
+            if tool_name == "create_vulnerability_report":
+                status = tool_data.get("status", "")
+                if status == "completed":
+                    result = tool_data.get("result", {})
+                    if isinstance(result, dict) and result.get("success"):
+                        count += 1
         return count
 
     def _gather_agent_events(self, agent_id: str) -> list[dict[str, Any]]:
@@ -1462,8 +1459,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
                 "id": f"chat_{msg['message_id']}",
                 "data": msg,
             }
-            for msg in self.tracer.chat_messages
-            if msg.get("agent_id") == agent_id
+            for msg in self.tracer.get_agent_chat_messages(agent_id)
         ]
 
         tool_events = [
@@ -1473,8 +1469,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
                 "id": f"tool_{exec_id}",
                 "data": tool_data,
             }
-            for exec_id, tool_data in list(self.tracer.tool_executions.items())
-            if tool_data.get("agent_id") == agent_id
+            for exec_id, tool_data in self.tracer.get_agent_tool_executions(agent_id)
         ]
 
         events = chat_events + tool_events
