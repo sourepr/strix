@@ -69,9 +69,9 @@ Toast.-information .toast--title {
 
 #agents_tree {
     height: 1fr;
-    background: transparent;
-    border: round #333333;
-    border-title-color: #a8a29e;
+    background: #050505;
+    border: round #1a3a1a;
+    border-title-color: #22c55e;
     border-title-style: bold;
     padding: 1;
     margin-bottom: 0;
@@ -79,11 +79,11 @@ Toast.-information .toast--title {
 
 #stats_scroll {
     height: auto;
-    max-height: 15;
-    background: transparent;
+    max-height: 18;
+    background: #050505;
     padding: 0;
     margin: 0;
-    border: round #333333;
+    border: round #1a3a1a;
     scrollbar-size: 0 0;
 }
 
@@ -96,15 +96,15 @@ Toast.-information .toast--title {
 
 #vulnerabilities_panel {
     height: auto;
-    max-height: 12;
-    background: transparent;
+    max-height: 14;
+    background: #050505;
     padding: 0;
     margin: 0;
-    border: round #333333;
+    border: round #3a1a1a;
     overflow-y: auto;
-    scrollbar-background: #000000;
+    scrollbar-background: #0a0a0a;
     scrollbar-color: #333333;
-    scrollbar-corner-color: #000000;
+    scrollbar-corner-color: #0a0a0a;
     scrollbar-size-vertical: 1;
 }
 
@@ -215,14 +215,14 @@ VulnerabilityDetailScreen {
 
 #chat_history {
     height: 1fr;
-    background: transparent;
-    border: round #0a0a0a;
+    background: #050505;
+    border: round #1a1a1a;
     padding: 0;
     margin-bottom: 0;
     margin-right: 0;
-    scrollbar-background: #000000;
-    scrollbar-color: #1a1a1a;
-    scrollbar-corner-color: #000000;
+    scrollbar-background: #0a0a0a;
+    scrollbar-color: #333333;
+    scrollbar-corner-color: #0a0a0a;
     scrollbar-size: 1 1;
 }
 
@@ -263,7 +263,7 @@ VulnerabilityDetailScreen {
 
 #chat_input_container {
     height: 3;
-    background: transparent;
+    background: #0a0a0a;
     border: round #333333;
     margin-right: 0;
     padding: 0;

@@ -97,12 +97,12 @@ class SplashScreen(Static):  # type: ignore[misc]
     ALLOW_SELECT = False
     PRIMARY_GREEN = "#22c55e"
     BANNER = (
-        " ███████╗████████╗██████╗ ██╗██╗  ██╗\n"
-        " ██╔════╝╚══██╔══╝██╔══██╗██║╚██╗██╔╝\n"
-        " ███████╗   ██║   ██████╔╝██║ ╚███╔╝\n"
-        " ╚════██║   ██║   ██╔══██╗██║ ██╔██╗\n"
-        " ███████║   ██║   ██║  ██║██║██╔╝ ██╗\n"
-        " ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
+        " ███████╗████████╗██████╗ ██╗██╗  ██╗███████╗\n"
+        " ██╔════╝╚══██╔══╝██╔══██╗██║██║ ██╔╝██╔════╝\n"
+        " ███████╗   ██║   ██████╔╝██║█████╔╝ █████╗  \n"
+        " ╚════██║   ██║   ██╔══██╗██║██╔═██╗ ██╔══╝  \n"
+        " ███████║   ██║   ██║  ██║██║██║  ██╗███████╗\n"
+        " ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝"
     )
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -155,7 +155,7 @@ class SplashScreen(Static):  # type: ignore[misc]
         return Panel.fit(content, border_style=self.PRIMARY_GREEN, padding=(1, 6))
 
     def _build_url_text(self) -> Text:
-        return Text("strix.ai", style=Style(color=self.PRIMARY_GREEN, bold=True))
+        return Text("strike.ai", style=Style(color=self.PRIMARY_GREEN, bold=True))
 
     def _build_welcome_text(self) -> Text:
         text = Text("Welcome to ", style=Style(color="white", bold=True))
@@ -883,7 +883,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
     def on_mount(self) -> None:
         self.title = "strike"
 
-        self.set_timer(4.5, self._hide_splash_screen)
+        self.set_timer(2.0, self._hide_splash_screen)
 
     def _hide_splash_screen(self) -> None:
         self.show_splash = False
@@ -1305,14 +1305,52 @@ class StrikeTUIApp(App):  # type: ignore[misc]
 
         stats_content = Text()
 
+        elapsed = self._get_elapsed_time()
+        if elapsed:
+            stats_content.append("⏱ ", style="#22c55e")
+            stats_content.append(elapsed, style="white")
+            stats_content.append("\n")
+
+        total_agents = len(self.tracer.agents)
+        running_agents = sum(
+            1 for a in self.tracer.agents.values() if a.get("status") == "running"
+        )
+        if total_agents > 0:
+            stats_content.append("🤖 ", style="#22c55e")
+            stats_content.append(f"{running_agents}/{total_agents} agents", style="white")
+            stats_content.append("\n")
+
+        vuln_count = len(self.tracer.vulnerability_reports)
+        if vuln_count > 0:
+            stats_content.append("🐞 ", style="#ef4444")
+            stats_content.append(f"{vuln_count} findings", style="#ef4444 bold")
+            stats_content.append("\n")
+
         stats_text = build_tui_stats_text(self.tracer, self.agent_config)
         if stats_text:
             stats_content.append(stats_text)
 
         version = get_package_version()
-        stats_content.append(f"\nv{version}", style="white")
+        stats_content.append(f"\nv{version}", style="dim")
 
         self._safe_widget_operation(stats_display.update, stats_content)
+
+    def _get_elapsed_time(self) -> str:
+        try:
+            from datetime import UTC, datetime
+
+            start = datetime.fromisoformat(self.tracer.start_time)
+            elapsed = datetime.now(UTC) - start
+            total_seconds = int(elapsed.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            if hours > 0:
+                return f"{hours}h {minutes}m {seconds}s"
+            if minutes > 0:
+                return f"{minutes}m {seconds}s"
+            return f"{seconds}s"
+        except (ValueError, AttributeError):
+            return ""
 
     def _update_vulnerabilities_panel(self) -> None:
         """Update the vulnerabilities panel with current vulnerability data."""
