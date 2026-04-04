@@ -82,6 +82,7 @@ class BaseAgent(metaclass=AgentMeta):
             self.llm.set_agent_identity(self.state.agent_name, self.state.agent_id)
         self._current_task: asyncio.Task[Any] | None = None
         self._force_stop = False
+        self._consecutive_empty_responses = 0
 
         from strike.telemetry.tracer import get_global_tracer
 
@@ -378,19 +379,25 @@ class BaseAgent(metaclass=AgentMeta):
         content_stripped = (final_response.content or "").strip()
 
         if not content_stripped:
+            self._consecutive_empty_responses += 1
+            if self._consecutive_empty_responses >= 5:
+                logger.warning(
+                    "Agent %s produced %d consecutive empty responses, forcing completion",
+                    self.state.agent_id,
+                    self._consecutive_empty_responses,
+                )
+                self.state.set_completed({"success": False, "error": "Too many empty responses"})
+                if tracer:
+                    tracer.update_agent_status(self.state.agent_id, "failed")
+                return True
             corrective_message = (
                 "You MUST NOT respond with empty messages. "
-                "If you currently have nothing to do or say, use an appropriate tool instead:\n"
-                "- Use agents_graph_actions.wait_for_message to wait for messages "
-                "from user or other agents\n"
-                "- Use agents_graph_actions.agent_finish if you are a sub-agent "
-                "and your task is complete\n"
-                "- Use finish_actions.finish_scan if you are the root/main agent "
-                "and the scan is complete"
+                "Use an appropriate tool: wait_for_message, agent_finish, or finish_scan."
             )
             self.state.add_message("user", corrective_message)
             return False
 
+        self._consecutive_empty_responses = 0
         thinking_blocks = getattr(final_response, "thinking_blocks", None)
         self.state.add_message("assistant", final_response.content, thinking_blocks=thinking_blocks)
         if tracer:

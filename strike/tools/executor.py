@@ -243,9 +243,9 @@ def _format_tool_result(tool_name: str, result: Any) -> tuple[str, list[dict[str
         final_result_str = f"Tool {tool_name} executed successfully"
     else:
         final_result_str = str(result_str)
-        if len(final_result_str) > 10000:
-            start_part = final_result_str[:4000]
-            end_part = final_result_str[-4000:]
+        if len(final_result_str) > 8000:
+            start_part = final_result_str[:3000]
+            end_part = final_result_str[-3000:]
             final_result_str = start_part + "\n\n... [middle content truncated] ...\n\n" + end_part
 
     observation_xml = (
