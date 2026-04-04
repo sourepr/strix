@@ -91,8 +91,53 @@ class Tracer:
         self.caido_url: str | None = None
         self.vulnerability_found_callback: Callable[[dict[str, Any]], None] | None = None
 
+        self._transcript_lock = threading.Lock()
+        self._transcript_path: Path | None = None
+        self._init_transcript()
+
         self._setup_telemetry()
         self._emit_run_started_event()
+
+    def _init_transcript(self) -> None:
+        try:
+            run_dir = self.get_run_dir()
+            self._transcript_path = run_dir / "session_transcript.log"
+            with self._transcript_lock:
+                with self._transcript_path.open("w", encoding="utf-8") as f:
+                    f.write(f"{'=' * 80}\n")
+                    f.write(f"  Strike Session Transcript\n")
+                    f.write(f"  Run: {self.run_name or self.run_id}\n")
+                    f.write(f"  Started: {self.start_time}\n")
+                    f.write(f"{'=' * 80}\n\n")
+        except OSError:
+            logger.debug("Failed to initialize session transcript")
+
+    def _write_transcript(self, entry: str) -> None:
+        if not self._transcript_path:
+            return
+        try:
+            ts = datetime.now(UTC).strftime("%H:%M:%S")
+            with self._transcript_lock:
+                with self._transcript_path.open("a", encoding="utf-8") as f:
+                    f.write(f"[{ts}] {entry}\n")
+        except OSError:
+            pass
+
+    def _write_transcript_block(self, header: str, body: str, max_body: int = 5000) -> None:
+        if not self._transcript_path:
+            return
+        if len(body) > max_body:
+            body = body[:max_body] + f"\n... [truncated, {len(body)} chars total]"
+        try:
+            ts = datetime.now(UTC).strftime("%H:%M:%S")
+            with self._transcript_lock:
+                with self._transcript_path.open("a", encoding="utf-8") as f:
+                    f.write(f"[{ts}] {header}\n")
+                    for line in body.splitlines():
+                        f.write(f"  {line}\n")
+                    f.write("\n")
+        except OSError:
+            pass
 
     @property
     def events_file_path(self) -> Path:
@@ -367,6 +412,10 @@ class Tracer:
 
         self.vulnerability_reports.append(report)
         logger.info(f"Added vulnerability report: {report_id} - {title}")
+        self._write_transcript(
+            f"!!! VULNERABILITY FOUND: [{severity.upper()}] {title} "
+            f"(target: {target or 'N/A'}, endpoint: {endpoint or 'N/A'})"
+        )
         posthog.finding(severity)
         self._emit_event(
             "finding.created",
@@ -449,6 +498,10 @@ class Tracer:
         }
 
         self.agents[agent_id] = agent_data
+        parent_info = f" (parent: {parent_id})" if parent_id else " (root)"
+        self._write_transcript(f">>> AGENT CREATED: {name} [{agent_id}]{parent_info}")
+        if task:
+            self._write_transcript_block(f"    Task:", task, max_body=2000)
         self._emit_event(
             "agent.created",
             actor={"agent_id": agent_id, "agent_name": name},
@@ -482,6 +535,12 @@ class Tracer:
             if agent_id not in self._agent_chat_index:
                 self._agent_chat_index[agent_id] = []
             self._agent_chat_index[agent_id].append(len(self.chat_messages) - 1)
+
+        agent_name = self.agents.get(agent_id or "", {}).get("name", agent_id or "?")
+        role_label = "USER" if role == "user" else "AGENT"
+        self._write_transcript_block(
+            f"[{role_label}] {agent_name}:", content, max_body=3000
+        )
 
         self._emit_event(
             "chat.message",
@@ -523,6 +582,14 @@ class Tracer:
         if agent_id in self.agents:
             self.agents[agent_id]["tool_executions"].append(execution_id)
 
+        agent_name = self.agents.get(agent_id, {}).get("name", agent_id)
+        args_summary = ", ".join(
+            f"{k}={str(v)[:80]}" for k, v in list(args.items())[:5]
+        ) if args else ""
+        self._write_transcript(
+            f"[TOOL] {agent_name} -> {tool_name}({args_summary})"
+        )
+
         self._emit_event(
             "tool.execution.started",
             actor={
@@ -554,6 +621,16 @@ class Tracer:
         tool_name = str(tool_data.get("tool_name", "unknown"))
         agent_id = str(tool_data.get("agent_id", "unknown"))
         error_payload = result if status in {"error", "failed"} else None
+
+        result_str = str(result) if result else ""
+        if status in {"error", "failed"}:
+            self._write_transcript_block(
+                f"[TOOL RESULT] {tool_name} -> {status.upper()}", result_str
+            )
+        elif result_str and tool_name not in ("scan_start_info", "subagent_start_info"):
+            self._write_transcript_block(
+                f"[TOOL RESULT] {tool_name} -> {status}", result_str
+            )
 
         self._emit_event(
             "tool.execution.updated",
@@ -590,6 +667,10 @@ class Tracer:
             self.agents[agent_id]["updated_at"] = datetime.now(UTC).isoformat()
             if error_message:
                 self.agents[agent_id]["error_message"] = error_message
+
+        agent_name = self.agents.get(agent_id, {}).get("name", agent_id)
+        extra = f" - {error_message}" if error_message else ""
+        self._write_transcript(f"--- {agent_name} status -> {status}{extra}")
 
         self._emit_event(
             "agent.status.updated",
@@ -870,4 +951,11 @@ class Tracer:
         return self.interrupted_content.pop(agent_id, None)
 
     def cleanup(self) -> None:
+        self._write_transcript(f"\n{'=' * 80}")
+        self._write_transcript(f"  Session ended. Agents: {len(self.agents)}, "
+                               f"Vulnerabilities: {len(self.vulnerability_reports)}, "
+                               f"Tool executions: {len(self.tool_executions)}")
+        if self._transcript_path:
+            self._write_transcript(f"  Transcript saved to: {self._transcript_path}")
+        self._write_transcript(f"{'=' * 80}\n")
         self.save_run_data(mark_complete=True)

@@ -191,7 +191,7 @@ class TerminalRenderer(BaseToolRenderer):
             for line in lines:
                 if not filtered_lines and not line.strip():
                     continue
-                if re.match(r"^\[STRIKE_\d+\]\$\s*", line):
+                if re.match(r"^\[(?:STRIKE|STRIX)_\d+\]\$\s*", line):
                     continue
                 if command and line.strip() == command.strip():
                     continue
@@ -199,7 +199,9 @@ class TerminalRenderer(BaseToolRenderer):
                     continue
                 filtered_lines.append(line)
 
-            while filtered_lines and re.match(r"^\[STRIKE_\d+\]\$\s*", filtered_lines[-1]):
+            while filtered_lines and re.match(
+                r"^\[(?:STRIKE|STRIX)_\d+\]\$\s*", filtered_lines[-1]
+            ):
                 filtered_lines.pop()
 
             cleaned = "\n".join(filtered_lines)

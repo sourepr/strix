@@ -715,6 +715,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
 
         self._streaming_render_cache: dict[str, tuple[int, Any]] = {}
         self._last_streaming_len: dict[str, int] = {}
+        self._event_render_cache: dict[str, Any] = {}
 
         self._scan_thread: threading.Thread | None = None
         self._scan_stop_event = threading.Event()
@@ -966,6 +967,8 @@ class StrikeTUIApp(App):  # type: ignore[misc]
 
         return False
 
+    MAX_VISIBLE_EVENTS = 150
+
     def _get_chat_content(
         self,
     ) -> tuple[Any, str | None]:
@@ -982,19 +985,26 @@ class StrikeTUIApp(App):  # type: ignore[misc]
                 "Starting agent...", "placeholder-no-activity"
             )
 
-        current_event_ids = [e["id"] for e in events]
+        current_event_count = len(events)
         current_streaming_len = len(streaming) if streaming else 0
         last_streaming_len = self._last_streaming_len.get(self.selected_agent_id, 0)
+        last_event_id = events[-1]["id"] if events else ""
 
         if (
-            current_event_ids == self._displayed_events
+            current_event_count == len(self._displayed_events)
+            and last_event_id == (self._displayed_events[-1] if self._displayed_events else "")
             and current_streaming_len == last_streaming_len
         ):
             return None, None
 
-        self._displayed_events = current_event_ids
+        self._displayed_events = [e["id"] for e in events]
         self._last_streaming_len[self.selected_agent_id] = current_streaming_len
-        return self._get_rendered_events_content(events), "chat-content"
+
+        total = len(events)
+        if total > self.MAX_VISIBLE_EVENTS:
+            events = events[-self.MAX_VISIBLE_EVENTS:]
+
+        return self._get_rendered_events_content(events, total), "chat-content"
 
     def _update_chat_view(self) -> None:
         if len(self.screen_stack) > 1 or self.show_splash or not self.is_mounted:
@@ -1083,19 +1093,38 @@ class StrikeTUIApp(App):  # type: ignore[misc]
             else:
                 combined.append(str(item))
 
-    def _get_rendered_events_content(self, events: list[dict[str, Any]]) -> Any:
+    def _get_rendered_events_content(
+        self, events: list[dict[str, Any]], total_events: int = 0
+    ) -> Any:
         renderables: list[Any] = []
 
         if not events:
             return Text()
 
-        for event in events:
-            content: Any = None
+        if total_events > len(events):
+            hidden = total_events - len(events)
+            truncation_notice = Text()
+            truncation_notice.append(
+                f"... {hidden} earlier events hidden for performance ...",
+                style="dim italic",
+            )
+            renderables.append(truncation_notice)
+            renderables.append(Text(""))
 
-            if event["type"] == "chat":
-                content = self._render_chat_content(event["data"])
-            elif event["type"] == "tool":
-                content = self._render_tool_content_simple(event["data"])
+        for event in events:
+            event_id = event["id"]
+            event_status = event["data"].get("status", "")
+
+            if event_id in self._event_render_cache and event_status not in ("running", ""):
+                content = self._event_render_cache[event_id]
+            else:
+                content = None
+                if event["type"] == "chat":
+                    content = self._render_chat_content(event["data"])
+                elif event["type"] == "tool":
+                    content = self._render_tool_content_simple(event["data"])
+                if content and event_status not in ("running", ""):
+                    self._event_render_cache[event_id] = content
 
             if content:
                 if renderables:
@@ -1524,6 +1553,7 @@ class StrikeTUIApp(App):  # type: ignore[misc]
         self._displayed_events.clear()
         self._streaming_render_cache.clear()
         self._last_streaming_len.clear()
+        self._event_render_cache.clear()
 
         self.call_later(self._update_chat_view)
         self._update_agent_status_display()
