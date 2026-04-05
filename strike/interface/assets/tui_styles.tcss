@@ -28,8 +28,8 @@ Toast.-information .toast--title {
 #splash_screen {
     height: 100%;
     width: 100%;
-    background: #000000;
-    color: #22c55e;
+    background: #0a0a0a;
+    color: #00ff41;
     align: center middle;
     content-align: center middle;
     text-align: center;

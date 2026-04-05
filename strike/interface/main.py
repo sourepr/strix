@@ -479,8 +479,6 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     console.print("\n")
     console.print(panel)
     console.print()
-    console.print("[#60a5fa]strike.ai[/]  [dim]·[/]  [#60a5fa]discord.gg/strix-ai[/]")
-    console.print()
 
 
 def pull_docker_image() -> None:

@@ -95,7 +95,8 @@ class ChatTextArea(TextArea):  # type: ignore[misc]
 
 class SplashScreen(Static):  # type: ignore[misc]
     ALLOW_SELECT = False
-    PRIMARY_GREEN = "#22c55e"
+    ACCENT = "#00ff41"
+    DIM_GREEN = "#0a5f1c"
     BANNER = (
         " ███████╗████████╗██████╗ ██╗██╗  ██╗███████╗\n"
         " ██╔════╝╚══██╔══╝██╔══██╗██║██║ ██╔╝██╔════╝\n"
@@ -123,7 +124,7 @@ class SplashScreen(Static):  # type: ignore[misc]
         yield panel_static
 
     def on_mount(self) -> None:
-        self._animation_timer = self.set_interval(0.05, self._animate_start_line)
+        self._animation_timer = self.set_interval(0.04, self._animate_start_line)
 
     def on_unmount(self) -> None:
         if self._animation_timer is not None:
@@ -141,52 +142,47 @@ class SplashScreen(Static):  # type: ignore[misc]
 
     def _build_panel(self, start_line: Text) -> Panel:
         content = Group(
-            Align.center(Text(self.BANNER.strip("\n"), style=self.PRIMARY_GREEN, justify="center")),
             Align.center(Text(" ")),
-            Align.center(self._build_welcome_text()),
-            Align.center(self._build_version_text()),
+            Align.center(Text(self.BANNER.strip("\n"), style=self.ACCENT, justify="center")),
+            Align.center(Text(" ")),
             Align.center(self._build_tagline_text()),
+            Align.center(self._build_version_text()),
             Align.center(Text(" ")),
             Align.center(start_line.copy()),
-            Align.center(Text(" ")),
-            Align.center(self._build_url_text()),
         )
 
-        return Panel.fit(content, border_style=self.PRIMARY_GREEN, padding=(1, 6))
-
-    def _build_url_text(self) -> Text:
-        return Text("strike.ai", style=Style(color=self.PRIMARY_GREEN, bold=True))
-
-    def _build_welcome_text(self) -> Text:
-        text = Text("Welcome to ", style=Style(color="white", bold=True))
-        text.append("Strike", style=Style(color=self.PRIMARY_GREEN, bold=True))
-        text.append("!", style=Style(color="white", bold=True))
-        return text
+        return Panel.fit(content, border_style=self.DIM_GREEN, padding=(1, 4))
 
     def _build_version_text(self) -> Text:
-        return Text(f"v{self._version}", style=Style(color="white", dim=True))
+        text = Text()
+        text.append("[ ", style=self.DIM_GREEN)
+        text.append(f"v{self._version}", style=Style(color="#666666"))
+        text.append(" ]", style=self.DIM_GREEN)
+        return text
 
     def _build_tagline_text(self) -> Text:
-        return Text("Open-source AI hackers for your apps", style=Style(color="white", dim=True))
+        text = Text()
+        text.append("Autonomous Penetration Testing Framework", style=Style(color="#888888"))
+        return text
 
     def _build_start_line_text(self, phase: int) -> Text:
-        full_text = "Starting Strike Agent"
+        full_text = ">> Initializing agents ..."
         text_len = len(full_text)
 
-        shine_pos = phase % (text_len + 8)
+        shine_pos = phase % (text_len + 10)
 
         text = Text()
         for i, char in enumerate(full_text):
             dist = abs(i - shine_pos)
 
             if dist <= 1:
-                style = Style(color="bright_white", bold=True)
+                style = Style(color=self.ACCENT, bold=True)
             elif dist <= 3:
-                style = Style(color="white", bold=True)
+                style = Style(color="#22c55e")
             elif dist <= 5:
-                style = Style(color="#a3a3a3")
+                style = Style(color="#0d6b2c")
             else:
-                style = Style(color="#525252")
+                style = Style(color="#0a3d1a")
 
             text.append(char, style=style)
 
